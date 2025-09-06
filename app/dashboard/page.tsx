@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/lib/auth';
-import { User } from '@/lib/auth';
+import { useAuth } from '@/lib/auth-service';
+import { User } from '@/lib/store/auth-store';
 import { 
   ShoppingCart, 
   Factory, 
@@ -11,7 +11,9 @@ import {
   AlertTriangle,
   DollarSign,
   Package,
-  Users
+  Users,
+  Building2,
+  CheckCircle
 } from 'lucide-react';
 
 const stats = [
@@ -100,22 +102,19 @@ const workOrders = [
 ];
 
 export default function Dashboard() {
-  const { getCurrentUser } = useAuth();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, getCurrentUser, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    const loadUser = async () => {
-      const currentUser = await getCurrentUser();
-      setUser(currentUser);
-    };
-    loadUser();
-  }, [getCurrentUser]);
+    if (isAuthenticated && !user) {
+      getCurrentUser();
+    }
+  }, [getCurrentUser, user, isAuthenticated]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">
-          안녕하세요, {user?.name || '사용자'}님
+          안녕하세요, {user?.name}님
         </h1>
         <p className="text-gray-600">오늘의 ERP 현황을 확인하세요.</p>
       </div>
@@ -218,23 +217,49 @@ export default function Dashboard() {
           <h3 className="text-lg font-medium text-gray-900">빠른 실행</h3>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <a 
+              href="/master/suppliers" 
+              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Building2 className="h-8 w-8 text-primary-600 mb-2" />
+              <span className="text-sm text-gray-700">협력회사 관리</span>
+            </a>
+            <a 
+              href="/purchase/orders" 
+              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <ShoppingCart className="h-8 w-8 text-primary-600 mb-2" />
-              <span className="text-sm text-gray-700">구매 주문</span>
-            </button>
-            <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <span className="text-sm text-gray-700">구매주문 관리</span>
+            </a>
+            <a 
+              href="/production/work-orders" 
+              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <Factory className="h-8 w-8 text-primary-600 mb-2" />
-              <span className="text-sm text-gray-700">작업 지시</span>
-            </button>
-            <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <Package className="h-8 w-8 text-primary-600 mb-2" />
-              <span className="text-sm text-gray-700">재고 조회</span>
-            </button>
-            <button className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <span className="text-sm text-gray-700">작업지시 관리</span>
+            </a>
+            <a 
+              href="/inventory/status" 
+              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Warehouse className="h-8 w-8 text-primary-600 mb-2" />
+              <span className="text-sm text-gray-700">재고현황 조회</span>
+            </a>
+            <a 
+              href="/quality/inspections" 
+              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <CheckCircle className="h-8 w-8 text-primary-600 mb-2" />
+              <span className="text-sm text-gray-700">품질검사 관리</span>
+            </a>
+            <a 
+              href="/sales/orders" 
+              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <TrendingUp className="h-8 w-8 text-primary-600 mb-2" />
-              <span className="text-sm text-gray-700">판매 주문</span>
-            </button>
+              <span className="text-sm text-gray-700">수주 관리</span>
+            </a>
           </div>
         </div>
       </div>

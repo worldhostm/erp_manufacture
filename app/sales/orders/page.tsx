@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, Eye, Truck, FileText, Building2 } from 'lucide-react';
+import { Plus, Search, Eye, Truck, FileText, Building2, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { downloadExcel, ExcelColumn } from '@/lib/excel';
 
 interface SalesOrder {
   id: number;
@@ -167,6 +168,33 @@ export default function SalesOrdersPage() {
     setShowModal(true);
   };
 
+  const handleExcelDownload = () => {
+    const columns: ExcelColumn[] = [
+      { key: 'orderNumber', label: '수주번호', width: 15 },
+      { key: 'customerName', label: '고객명', width: 20 },
+      { key: 'customerType', label: '구분', width: 10 },
+      { key: 'orderDate', label: '수주일자', width: 12 },
+      { key: 'deliveryDate', label: '납기일자', width: 12 },
+      { key: 'status', label: '상태', width: 10 },
+      { key: 'totalAmount', label: '주문금액', width: 15 },
+      { key: 'currency', label: '통화', width: 8 },
+      { key: 'paymentTerms', label: '결제조건', width: 15 },
+      { key: 'salesRep', label: '영업담당', width: 12 }
+    ];
+
+    const excelData = filteredOrders.map(order => ({
+      ...order,
+      customerType: order.customerType === 'DOMESTIC' ? '내수' : '수출',
+      status: getStatusText(order.status),
+      totalAmount: formatAmount(order.totalAmount, order.currency)
+    }));
+
+    const success = downloadExcel(excelData, columns, '수주목록');
+    if (!success) {
+      alert('엑셀 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
   const totalDomesticAmount = salesOrders
     .filter(order => order.customerType === 'DOMESTIC' && order.currency === 'KRW')
     .reduce((sum, order) => sum + order.totalAmount, 0);
@@ -182,10 +210,19 @@ export default function SalesOrdersPage() {
           <h1 className="text-2xl font-semibold text-gray-900">수주 관리</h1>
           <p className="text-gray-600">고객으로부터의 주문을 접수하고 관리합니다.</p>
         </div>
-        <button className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors">
-          <Plus className="h-4 w-4 mr-2" />
-          신규 수주
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={handleExcelDownload}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            엑셀 다운로드
+          </button>
+          <button className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors">
+            <Plus className="h-4 w-4 mr-2" />
+            신규 수주
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

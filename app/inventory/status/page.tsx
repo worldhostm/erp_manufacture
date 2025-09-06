@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, AlertTriangle, Package, TrendingDown, TrendingUp, Filter } from 'lucide-react';
+import { Search, AlertTriangle, Package, TrendingDown, TrendingUp, Filter, Download } from 'lucide-react';
+import { downloadExcel, ExcelColumn } from '@/lib/excel';
 
 interface InventoryItem {
   id: number;
@@ -130,11 +131,59 @@ export default function InventoryStatusPage() {
   const lowStockItems = inventoryItems.filter(item => item.currentStock <= item.minStock).length;
   const totalItems = inventoryItems.length;
 
+  const handleExcelDownload = () => {
+    const columns: ExcelColumn[] = [
+      { key: 'itemName', label: '품목명', width: 25 },
+      { key: 'itemCode', label: '품목코드', width: 12 },
+      { key: 'category', label: '카테고리', width: 12 },
+      { key: 'warehouse', label: '창고', width: 15 },
+      { key: 'currentStock', label: '현재고', width: 12 },
+      { key: 'reservedStock', label: '예약재고', width: 12 },
+      { key: 'availableStock', label: '가용재고', width: 12 },
+      { key: 'unit', label: '단위', width: 8 },
+      { key: 'minStock', label: '안전재고', width: 12 },
+      { key: 'maxStock', label: '최대재고', width: 12 },
+      { key: 'stockStatus', label: '재고상태', width: 10 },
+      { key: 'totalValue', label: '총 가치', width: 15 },
+      { key: 'lastMovement', label: '최근이동일', width: 12 },
+      { key: 'movementType', label: '이동유형', width: 10 }
+    ];
+
+    const excelData = filteredItems.map(item => {
+      const stockStatus = getStockStatus(item);
+      return {
+        ...item,
+        currentStock: `${item.currentStock.toLocaleString()} ${item.unit}`,
+        reservedStock: `${item.reservedStock.toLocaleString()} ${item.unit}`,
+        availableStock: `${item.availableStock.toLocaleString()} ${item.unit}`,
+        minStock: `${item.minStock.toLocaleString()} ${item.unit}`,
+        maxStock: `${item.maxStock.toLocaleString()} ${item.unit}`,
+        stockStatus: stockStatus.text,
+        totalValue: `₩${item.totalValue.toLocaleString()}`,
+        movementType: item.movementType === 'IN' ? '입고' : '출고'
+      };
+    });
+
+    const success = downloadExcel(excelData, columns, '재고현황목록');
+    if (!success) {
+      alert('엑셀 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">재고현황 조회</h1>
-        <p className="text-gray-600">실시간 재고 현황을 조회하고 관리합니다.</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">재고현황 조회</h1>
+          <p className="text-gray-600">실시간 재고 현황을 조회하고 관리합니다.</p>
+        </div>
+        <button
+          onClick={handleExcelDownload}
+          className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          엑셀 다운로드
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

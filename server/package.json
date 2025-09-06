@@ -10,7 +10,10 @@
     "clean": "rimraf dist",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "seed": "ts-node scripts/seedDatabase.ts",
+    "test:db": "jest tests/database --verbose",
+    "dev:log": "node scripts/start-dev.js"
   },
   "keywords": ["erp", "manufacturing", "express", "mongodb"],
   "author": "ERP Team",

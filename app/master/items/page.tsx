@@ -1,90 +1,79 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Download } from 'lucide-react';
+import { downloadExcel, ExcelColumn } from '@/lib/excel';
+import { useAuth } from '@/lib/auth-service';
 
 interface Item {
-  id: number;
+  _id: string;
   code: string;
   name: string;
-  category: string;
-  supplier?: {
-    id: number;
+  category: 'RAW_MATERIAL' | 'COMPONENT' | 'FINISHED_PRODUCT' | 'CONSUMABLE';
+  supplierId?: {
+    _id: string;
     name: string;
+    businessNumber?: string;
+    type: string;
   };
   unit: string;
   price: number;
   cost: number;
   minStock: number;
   maxStock: number;
+  safetyStock: number;
+  leadTime: number;
+  specification?: string;
+  description?: string;
+  weight?: number;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  };
   isActive: boolean;
 }
 
-interface Supplier {
-  id: number;
-  name: string;
-  type: string;
-}
-
 export default function ItemsPage() {
-  const [items, setItems] = useState<Item[]>([
-    {
-      id: 1,
-      code: 'ITM-001',
-      name: '철강 원자재 A',
-      category: '원자재',
-      supplier: { id: 1, name: '㈜ABC소재' },
-      unit: 'kg',
-      price: 1500,
-      cost: 1200,
-      minStock: 100,
-      maxStock: 1000,
-      isActive: true
-    },
-    {
-      id: 2,
-      code: 'ITM-002',
-      name: '볼트 M8x20',
-      category: '부품',
-      supplier: { id: 2, name: '대한부품' },
-      unit: '개',
-      price: 50,
-      cost: 30,
-      minStock: 500,
-      maxStock: 5000,
-      isActive: true
-    },
-    {
-      id: 3,
-      code: 'ITM-003',
-      name: '제품A 완제품',
-      category: '완제품',
-      supplier: { id: 1, name: '㈜ABC소재' },
-      unit: '개',
-      price: 25000,
-      cost: 18000,
-      minStock: 10,
-      maxStock: 100,
-      isActive: true
-    }
-  ]);
-  
-  const [suppliers, setSuppliers] = useState<Supplier[]>([
-    { id: 1, name: '㈜ABC소재', type: 'SUPPLIER' },
-    { id: 2, name: '대한부품', type: 'SUPPLIER' },
-    { id: 3, name: '신영화학', type: 'SUPPLIER' }
-  ]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { makeAuthenticatedRequest, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const fetchItems = async () => {
+      try {
+        setLoading(true);
+        const response = await makeAuthenticatedRequest('/api/items');
+        
+        if (response.ok) {
+          const data = await response.json();
+          setItems(data.data.items);
+        } else {
+          throw new Error('품목 데이터를 불러오는데 실패했습니다.');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchItems();
+  }, [isAuthenticated]);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSupplier, setSelectedSupplier] = useState<number | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSupplier = !selectedSupplier || item.supplier?.id === selectedSupplier;
-    return matchesSearch && matchesSupplier;
+    const matchesCategory = !selectedCategory || item.category === selectedCategory;
+    return matchesSearch && matchesCategory;
   });
 
   const handleEdit = (item: Item) => {
@@ -92,9 +81,21 @@ export default function ItemsPage() {
     setShowModal(true);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: string) => {
     if (confirm('정말 삭제하시겠습니까?')) {
-      setItems(items.filter(item => item.id !== id));
+      try {
+        const response = await makeAuthenticatedRequest(`/api/items/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          setItems(items.filter(item => item._id !== id));
+        } else {
+          alert('삭제에 실패했습니다.');
+        }
+      } catch (error) {
+        alert('삭제 중 오류가 발생했습니다.');
+      }
     }
   };
 
@@ -104,6 +105,28 @@ export default function ItemsPage() {
     setEditingItem(null);
   };
 
+  const handleExcelDownload = () => {
+    const columns: ExcelColumn[] = [
+      { key: 'code', label: '품목코드', width: 15 },
+      { key: 'name', label: '품목명', width: 25 },
+      { key: 'category', label: '카테고리', width: 15 },
+      { key: 'supplierId.name', label: '협력사', width: 20 },
+      { key: 'unit', label: '단위', width: 10 },
+      { key: 'price', label: '판매가', width: 15 },
+      { key: 'cost', label: '원가', width: 15 },
+      { key: 'minStock', label: '최소재고', width: 12 },
+      { key: 'maxStock', label: '최대재고', width: 12 },
+      { key: 'safetyStock', label: '안전재고', width: 12 },
+      { key: 'leadTime', label: '리드타임', width: 10 },
+      { key: 'isActive', label: '상태', width: 10 }
+    ];
+
+    const success = downloadExcel(filteredItems, columns, '품목목록');
+    if (!success) {
+      alert('엑셀 다운로드에 실패했습니다.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -111,13 +134,23 @@ export default function ItemsPage() {
           <h1 className="text-2xl font-semibold text-gray-900">품목/BOM 관리</h1>
           <p className="text-gray-600">제품, 부품, 원자재 정보를 관리합니다.</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          신규 등록
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={handleExcelDownload}
+            disabled={filteredItems.length === 0}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            엑셀 다운로드
+          </button>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            신규 등록
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow">
@@ -135,86 +168,104 @@ export default function ItemsPage() {
             </div>
             <div className="min-w-[200px]">
               <select
-                value={selectedSupplier || ''}
-                onChange={(e) => setSelectedSupplier(e.target.value ? Number(e.target.value) : null)}
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">전체 협력사</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </option>
-                ))}
+                <option value="">전체 카테고리</option>
+                <option value="RAW_MATERIAL">원자재</option>
+                <option value="COMPONENT">부품</option>
+                <option value="FINISHED_PRODUCT">완제품</option>
+                <option value="CONSUMABLE">소모품</option>
               </select>
             </div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  품목코드
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  품목명
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  카테고리
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  협력사
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  단위
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  판매가
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  원가
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  최소재고
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  상태
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  관리
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredItems.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {item.code}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.category}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.supplier?.name || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.unit}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ₩{item.price.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ₩{item.cost.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {item.minStock}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+          {loading ? (
+            <div className="flex justify-center items-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+              <span className="ml-2 text-gray-600">로딩 중...</span>
+            </div>
+          ) : error ? (
+            <div className="text-center p-8">
+              <p className="text-red-600">{error}</p>
+            </div>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    품목코드
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    품목명
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    카테고리
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    협력사
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    단위
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    판매가
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    원가
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    최소재고
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    상태
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    관리
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredItems.map((item) => (
+                  <tr key={item._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {item.code}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        item.category === 'RAW_MATERIAL' ? 'bg-blue-100 text-blue-800' :
+                        item.category === 'COMPONENT' ? 'bg-green-100 text-green-800' :
+                        item.category === 'FINISHED_PRODUCT' ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {item.category === 'RAW_MATERIAL' ? '원자재' :
+                         item.category === 'COMPONENT' ? '부품' :
+                         item.category === 'FINISHED_PRODUCT' ? '완제품' : '소모품'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.supplierId?.name || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.unit}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₩{item.price.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      ₩{item.cost.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {item.minStock}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       item.isActive 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
@@ -230,7 +281,7 @@ export default function ItemsPage() {
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => handleDelete(item._id)}
                       className="text-red-600 hover:text-red-900"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -238,8 +289,16 @@ export default function ItemsPage() {
                   </td>
                 </tr>
               ))}
+              {filteredItems.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="px-6 py-4 text-center text-gray-500">
+                    등록된 품목이 없습니다.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
+          )}
         </div>
       </div>
 
@@ -290,11 +349,8 @@ export default function ItemsPage() {
                   </label>
                   <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500">
                     <option value="">협력사 선택</option>
-                    {suppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))}
+                    <option value="supplier1">한국제조(주)</option>
+                    <option value="supplier2">글로벌공급(주)</option>
                   </select>
                 </div>
                 <div>

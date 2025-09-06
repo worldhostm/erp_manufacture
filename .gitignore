@@ -17,6 +17,7 @@ next-env.d.ts
 # Production
 /build
 /dist
+server/dist/
 
 # Environment variables
 .env
@@ -24,6 +25,7 @@ next-env.d.ts
 .env.development.local
 .env.test.local
 .env.production.local
+.env.example
 server/.env
 
 # Debug
@@ -116,3 +118,9 @@ test_routes.sh
 
 # Local claude files
 .claude/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

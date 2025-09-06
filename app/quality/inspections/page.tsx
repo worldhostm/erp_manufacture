@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, CheckCircle, XCircle, Clock, Eye, AlertTriangle } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, Clock, Eye, AlertTriangle, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { downloadExcel, ExcelColumn } from '@/lib/excel';
 
 interface QualityInspection {
   id: number;
@@ -194,6 +195,42 @@ export default function QualityInspectionsPage() {
     return Math.round((inspection.passedQuantity / inspection.inspectedQuantity) * 100);
   };
 
+  const handleExcelDownload = () => {
+    const columns: ExcelColumn[] = [
+      { key: 'inspectionNumber', label: '검사번호', width: 15 },
+      { key: 'itemName', label: '품목명', width: 20 },
+      { key: 'itemCode', label: '품목코드', width: 12 },
+      { key: 'source', label: '검사구분', width: 12 },
+      { key: 'sourceNumber', label: '원본번호', width: 15 },
+      { key: 'inspectionDate', label: '검사일자', width: 12 },
+      { key: 'inspector', label: '검사자', width: 10 },
+      { key: 'inspectedQuantity', label: '검사수량', width: 12 },
+      { key: 'passedQuantity', label: '합격수량', width: 12 },
+      { key: 'failedQuantity', label: '불량수량', width: 12 },
+      { key: 'passRate', label: '합격률', width: 10 },
+      { key: 'result', label: '결과', width: 12 },
+      { key: 'defectTypes', label: '불량유형', width: 20 },
+      { key: 'notes', label: '특이사항', width: 25 }
+    ];
+
+    const excelData = filteredInspections.map(inspection => ({
+      ...inspection,
+      source: getSourceText(inspection.source),
+      inspectedQuantity: `${inspection.inspectedQuantity.toLocaleString()} ${inspection.unit}`,
+      passedQuantity: `${inspection.passedQuantity.toLocaleString()} ${inspection.unit}`,
+      failedQuantity: `${inspection.failedQuantity.toLocaleString()} ${inspection.unit}`,
+      passRate: inspection.result === 'PENDING' ? '-' : `${getPassRate(inspection)}%`,
+      result: getResultText(inspection.result),
+      defectTypes: inspection.defectTypes ? inspection.defectTypes.join(', ') : '',
+      notes: inspection.notes || ''
+    }));
+
+    const success = downloadExcel(excelData, columns, '품질검사목록');
+    if (!success) {
+      alert('엑셀 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
   const totalInspections = inspections.length;
   const passedInspections = inspections.filter(i => i.result === 'PASS').length;
   const failedInspections = inspections.filter(i => i.result === 'FAIL').length;
@@ -206,10 +243,19 @@ export default function QualityInspectionsPage() {
           <h1 className="text-2xl font-semibold text-gray-900">품질검사 관리</h1>
           <p className="text-gray-600">품질검사 결과를 관리하고 품질 기준을 확인합니다.</p>
         </div>
-        <button className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors">
-          <Plus className="h-4 w-4 mr-2" />
-          신규 검사
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={handleExcelDownload}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            엑셀 다운로드
+          </button>
+          <button className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors">
+            <Plus className="h-4 w-4 mr-2" />
+            신규 검사
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

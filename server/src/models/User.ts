@@ -20,7 +20,14 @@ const UserSchema: Schema = new Schema({
     type: String,
     required: [true, 'Name is required'],
     trim: true,
-    maxlength: [100, 'Name cannot exceed 100 characters']
+    maxlength: [100, 'Name cannot exceed 100 characters'],
+    set: function(value: string) {
+      // Ensure UTF-8 encoding when setting value
+      if (typeof value === 'string') {
+        return Buffer.from(value, 'utf8').toString('utf8');
+      }
+      return value;
+    }
   },
   email: {
     type: String,
@@ -43,12 +50,24 @@ const UserSchema: Schema = new Schema({
   department: {
     type: String,
     trim: true,
-    maxlength: [100, 'Department cannot exceed 100 characters']
+    maxlength: [100, 'Department cannot exceed 100 characters'],
+    set: function(value: string) {
+      if (typeof value === 'string') {
+        return Buffer.from(value, 'utf8').toString('utf8');
+      }
+      return value;
+    }
   },
   position: {
     type: String,
     trim: true,
-    maxlength: [100, 'Position cannot exceed 100 characters']
+    maxlength: [100, 'Position cannot exceed 100 characters'],
+    set: function(value: string) {
+      if (typeof value === 'string') {
+        return Buffer.from(value, 'utf8').toString('utf8');
+      }
+      return value;
+    }
   },
   phone: {
     type: String,

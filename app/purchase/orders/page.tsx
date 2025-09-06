@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, Edit, Eye, FileText } from 'lucide-react';
+import { Plus, Search, Edit, Eye, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { downloadExcel, ExcelColumn } from '@/lib/excel';
 
 interface PurchaseOrder {
   id: number;
@@ -108,6 +109,28 @@ export default function PurchaseOrdersPage() {
     setShowModal(true);
   };
 
+  const handleExcelDownload = () => {
+    const columns: ExcelColumn[] = [
+      { key: 'orderNumber', label: '주문번호', width: 15 },
+      { key: 'supplier', label: '공급업체', width: 20 },
+      { key: 'orderDate', label: '주문일자', width: 12 },
+      { key: 'expectedDate', label: '납기일자', width: 12 },
+      { key: 'status', label: '상태', width: 10 },
+      { key: 'totalAmount', label: '총 금액', width: 15 }
+    ];
+
+    const excelData = filteredOrders.map(order => ({
+      ...order,
+      status: getStatusText(order.status),
+      totalAmount: `₩${order.totalAmount.toLocaleString()}`
+    }));
+
+    const success = downloadExcel(excelData, columns, '구매주문목록');
+    if (!success) {
+      alert('엑셀 다운로드 중 오류가 발생했습니다.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -115,12 +138,21 @@ export default function PurchaseOrdersPage() {
           <h1 className="text-2xl font-semibold text-gray-900">구매주문 관리</h1>
           <p className="text-gray-600">구매주문서를 작성하고 관리합니다.</p>
         </div>
-        <button
-          className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          신규 주문
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={handleExcelDownload}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            엑셀 다운로드
+          </button>
+          <button
+            className="flex items-center px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            신규 주문
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow">

@@ -111,10 +111,12 @@ router.post('/login', [
     }
 
     const { email, password } = req.body;
+    // console.log(email);
+    // console.log(password);
 
     // Check if user exists and password is correct
     const user = await User.findOne({ email }).select('+password');
-    
+    console.log(user);
     if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
       return next(new AppError('Incorrect email or password', 401));
     }
@@ -203,6 +205,20 @@ router.patch('/me', protect, [
       data: {
         user: updatedUser
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @desc    Logout user
+// @route   POST /api/auth/logout
+// @access  Private
+router.post('/logout', protect, async (req: AuthRequest, res: express.Response, next: express.NextFunction) => {
+  try {
+    res.status(200).json({
+      status: 'success',
+      message: 'Logged out successfully'
     });
   } catch (error) {
     next(error);

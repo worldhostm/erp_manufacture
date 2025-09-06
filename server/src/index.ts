@@ -6,9 +6,15 @@ import dotenv from 'dotenv';
 import { connectDB } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
 
+// Set UTF-8 encoding for Node.js process
+process.env.LC_ALL = 'C.UTF-8';
+process.env.LANG = 'C.UTF-8';
+
 // Routes
 import authRoutes from './routes/auth';
 import companyRoutes from './routes/companies';
+import supplierRoutes from './routes/suppliers';
+import adminRoutes from './routes/admin';
 import itemRoutes from './routes/items';
 import purchaseRoutes from './routes/purchase';
 import inventoryRoutes from './routes/inventory';
@@ -33,11 +39,27 @@ const limiter = rateLimit({
 app.use(helmet());
 app.use(limiter);
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Set UTF-8 encoding for all responses
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  
+  // Override res.json to ensure UTF-8 encoding
+  const originalJson = res.json;
+  res.json = function(body: any) {
+    return originalJson.call(this, body);
+  };
+  
+  next();
+});
 
 // Health check
 app.get('/health', (req, res) => {
@@ -51,6 +73,8 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/purchase', purchaseRoutes);
 app.use('/api/inventory', inventoryRoutes);

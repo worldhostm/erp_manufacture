@@ -33,7 +33,14 @@ const CompanySchema: Schema = new Schema({
     type: String,
     required: [true, 'Company name is required'],
     trim: true,
-    maxlength: [255, 'Company name cannot exceed 255 characters']
+    maxlength: [255, 'Company name cannot exceed 255 characters'],
+    set: function(value: string) {
+      // Ensure UTF-8 encoding when setting value
+      if (typeof value === 'string') {
+        return Buffer.from(value, 'utf8').toString('utf8');
+      }
+      return value;
+    }
   },
   businessNumber: {
     type: String,
@@ -44,7 +51,13 @@ const CompanySchema: Schema = new Schema({
   address: {
     type: String,
     trim: true,
-    maxlength: [500, 'Address cannot exceed 500 characters']
+    maxlength: [500, 'Address cannot exceed 500 characters'],
+    set: function(value: string) {
+      if (typeof value === 'string') {
+        return Buffer.from(value, 'utf8').toString('utf8');
+      }
+      return value;
+    }
   },
   phone: {
     type: String,
@@ -60,7 +73,13 @@ const CompanySchema: Schema = new Schema({
   ceo: {
     type: String,
     trim: true,
-    maxlength: [100, 'CEO name cannot exceed 100 characters']
+    maxlength: [100, 'CEO name cannot exceed 100 characters'],
+    set: function(value: string) {
+      if (typeof value === 'string') {
+        return Buffer.from(value, 'utf8').toString('utf8');
+      }
+      return value;
+    }
   },
   type: {
     type: String,
@@ -70,7 +89,13 @@ const CompanySchema: Schema = new Schema({
   contactPerson: {
     type: String,
     trim: true,
-    maxlength: [100, 'Contact person name cannot exceed 100 characters']
+    maxlength: [100, 'Contact person name cannot exceed 100 characters'],
+    set: function(value: string) {
+      if (typeof value === 'string') {
+        return Buffer.from(value, 'utf8').toString('utf8');
+      }
+      return value;
+    }
   },
   contactPhone: {
     type: String,
@@ -131,7 +156,7 @@ const CompanySchema: Schema = new Schema({
 });
 
 // Indexes for better query performance
-CompanySchema.index({ name: 1 });
+CompanySchema.index({ name: 1 }, { unique: true });
 CompanySchema.index({ type: 1, isActive: 1 });
 CompanySchema.index({ businessNumber: 1 }, { sparse: true });
 CompanySchema.index({ createdBy: 1 });

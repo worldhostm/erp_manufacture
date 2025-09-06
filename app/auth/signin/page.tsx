@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/lib/auth-service';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -21,10 +21,10 @@ export default function SignIn() {
     try {
       const result = await login(email, password);
 
-      if (result.status === 'error') {
-        setError(result.message || '이메일 또는 비밀번호가 올바르지 않습니다.');
-      } else {
+      if (result.status === 'success') {
         router.push('/dashboard');
+      } else {
+        setError(result.message || '이메일 또는 비밀번호가 올바르지 않습니다.');
       }
     } catch (error) {
       setError('로그인 중 오류가 발생했습니다.');

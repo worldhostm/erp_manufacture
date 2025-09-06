@@ -97,13 +97,7 @@ const ItemSchema: Schema = new Schema({
   maxStock: {
     type: Number,
     default: 0,
-    min: [0, 'Maximum stock cannot be negative'],
-    validate: {
-      validator: function(this: IItem, v: number) {
-        return v >= this.minStock;
-      },
-      message: 'Maximum stock must be greater than or equal to minimum stock'
-    }
+    min: [0, 'Maximum stock cannot be negative']
   },
   safetyStock: {
     type: Number,
@@ -197,6 +191,15 @@ ItemSchema.virtual('supplier', {
   localField: 'supplierId',
   foreignField: '_id',
   justOne: true
+});
+
+// Pre-save validation hook for stock levels
+ItemSchema.pre('save', function(this: IItem, next) {
+  if (this.maxStock && this.minStock && this.maxStock < this.minStock) {
+    const error = new Error('Maximum stock must be greater than or equal to minimum stock');
+    return next(error);
+  }
+  next();
 });
 
 // Ensure virtual fields are serialized
