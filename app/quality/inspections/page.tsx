@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth-service';
 import { Plus, Search, CheckCircle, XCircle, Clock, Eye, AlertTriangle, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -30,87 +31,51 @@ interface QualityInspection {
 }
 
 export default function QualityInspectionsPage() {
-  const [inspections, setInspections] = useState<QualityInspection[]>([
-    {
-      id: 1,
-      inspectionNumber: 'QI-2024-001',
-      itemName: '철강 원자재 A',
-      itemCode: 'ITM-001',
-      inspectionDate: '2024-01-20',
-      inspector: '김검사',
-      result: 'PASS',
-      inspectedQuantity: 1000,
-      passedQuantity: 1000,
-      failedQuantity: 0,
-      unit: 'kg',
-      source: 'RECEIPT',
-      sourceNumber: 'RCP-2024-001',
-      standards: [
-        { dimension: '두께', tolerance: '±0.1mm', testMethod: '디지털캘리퍼' },
-        { dimension: '경도', tolerance: 'HRC 50-55', testMethod: '록웰 경도계' }
-      ]
-    },
-    {
-      id: 2,
-      inspectionNumber: 'QI-2024-002',
-      itemName: '볼트 M8x20',
-      itemCode: 'ITM-002',
-      inspectionDate: '2024-01-19',
-      inspector: '이품질',
-      result: 'FAIL',
-      inspectedQuantity: 500,
-      passedQuantity: 480,
-      failedQuantity: 20,
-      unit: '개',
-      defectTypes: ['치수불량', '표면결함'],
-      source: 'RECEIPT',
-      sourceNumber: 'RCP-2024-002',
-      standards: [
-        { dimension: '직경', tolerance: '8.0±0.05mm', testMethod: '마이크로미터' },
-        { dimension: '길이', tolerance: '20±0.5mm', testMethod: '버니어캘리퍼' }
-      ]
-    },
-    {
-      id: 3,
-      inspectionNumber: 'QI-2024-003',
-      itemName: '제품A',
-      itemCode: 'PRD-001',
-      inspectionDate: '2024-01-18',
-      inspector: '박검증',
-      result: 'CONDITIONAL_PASS',
-      inspectedQuantity: 100,
-      passedQuantity: 95,
-      failedQuantity: 5,
-      unit: '개',
-      defectTypes: ['외관불량'],
-      notes: '경미한 외관 결함 5개 발견, 기능상 문제없음',
-      source: 'PRODUCTION',
-      sourceNumber: 'WO-2024-001',
-      standards: [
-        { dimension: '외관', tolerance: '결함없음', testMethod: '육안검사' },
-        { dimension: '기능', tolerance: '정상동작', testMethod: '기능시험' }
-      ]
-    },
-    {
-      id: 4,
-      inspectionNumber: 'QI-2024-004',
-      itemName: '제품B',
-      itemCode: 'PRD-002',
-      inspectionDate: '2024-01-17',
-      inspector: '최점검',
-      result: 'PENDING',
-      inspectedQuantity: 50,
-      passedQuantity: 0,
-      failedQuantity: 0,
-      unit: '개',
-      source: 'PRODUCTION',
-      sourceNumber: 'WO-2024-002',
-      standards: [
-        { dimension: '성능', tolerance: '±5%', testMethod: '성능시험기' },
-        { dimension: '내구성', tolerance: '1000회 이상', testMethod: '내구성 시험' }
-      ]
+  const [inspections, setInspections] = useState<QualityInspection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { makeAuthenticatedRequest, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchInspections();
+  }, [isAuthenticated]);
+
+  const fetchInspections = async () => {
+    try {
+      setLoading(true);
+      const response = await makeAuthenticatedRequest('/api/quality-inspections');
+      
+      if (response.ok) {
+        const data = await response.json();
+        const formattedInspections = data.data.inspections.map((item: any, index: number) => ({
+          id: index + 1,
+          inspectionNumber: item.inspectionNumber,
+          itemName: item.itemName,
+          itemCode: item.itemCode,
+          inspectionDate: item.inspectionDate,
+          inspector: item.inspector,
+          result: item.result,
+          inspectedQuantity: item.inspectedQuantity,
+          passedQuantity: item.passedQuantity,
+          failedQuantity: item.failedQuantity,
+          unit: item.unit,
+          defectTypes: item.defectTypes,
+          notes: item.notes,
+          source: item.source,
+          sourceNumber: item.sourceNumber,
+          standards: item.standards
+        }));
+        setInspections(formattedInspections);
+      } else {
+        throw new Error('품질검사 데이터를 불러오는데 실패했습니다.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [resultFilter, setResultFilter] = useState<string>('ALL');

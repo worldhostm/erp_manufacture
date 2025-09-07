@@ -22,6 +22,13 @@ import productionRoutes from './routes/production';
 import qualityRoutes from './routes/quality';
 import salesRoutes from './routes/sales';
 import reportsRoutes from './routes/reports';
+import employeeRoutes from './routes/employee';
+import purchaseRequestRoutes from './routes/purchase-request';
+import receiptRoutes from './routes/receipt';
+import dashboardRoutes from './routes/dashboard';
+import qualityInspectionRoutes from './routes/quality-inspection';
+import workOrderRoutes from './routes/work-orders';
+import productionPlanRoutes from './routes/production-plans';
 
 dotenv.config();
 
@@ -82,6 +89,13 @@ app.use('/api/production', productionRoutes);
 app.use('/api/quality', qualityRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/employees', employeeRoutes);
+app.use('/api/purchase-requests', purchaseRequestRoutes);
+app.use('/api/receipts', receiptRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/quality-inspections', qualityInspectionRoutes);
+app.use('/api/work-orders', workOrderRoutes);
+app.use('/api/production-plans', productionPlanRoutes);
 
 // Error handling
 app.use(errorHandler);

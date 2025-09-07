@@ -142,8 +142,15 @@ export function Sidebar() {
 
   return (
     <div className="flex h-full w-64 flex-col overflow-y-auto bg-white border-r border-gray-200">
-      <div className="flex items-center h-16 flex-shrink-0 px-4 bg-primary-600">
+      <div className="flex items-center justify-between h-16 flex-shrink-0 px-4 bg-primary-600">
         <h1 className="text-xl font-semibold text-white">ERP System</h1>
+        <button
+          onClick={logout}
+          className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+          title="로그아웃"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
       </div>
       
       <div className="flex-1 px-4 py-4">
@@ -203,12 +210,6 @@ export function Sidebar() {
               {user?.department} / {user?.position}
             </p>
           </div>
-          <button
-            onClick={logout}
-            className="ml-3 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
         </div>
       </div>
     </div>

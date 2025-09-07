@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth-service';
 import { Plus, Search, Play, Pause, CheckCircle, Eye, Calendar, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -25,56 +26,50 @@ interface WorkOrder {
 }
 
 export default function WorkOrdersPage() {
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([
-    {
-      id: 1,
-      orderNumber: 'WO-2024-001',
-      itemName: '제품A',
-      itemCode: 'PRD-001',
-      quantity: 100,
-      unit: '개',
-      workCenter: '조립라인1',
-      startDate: '2024-01-15',
-      endDate: '2024-01-20',
-      actualStartDate: '2024-01-15T09:00:00',
-      status: 'IN_PROGRESS',
-      completedQuantity: 75,
-      assignedTo: '김작업',
-      priority: 'HIGH'
-    },
-    {
-      id: 2,
-      orderNumber: 'WO-2024-002',
-      itemName: '제품B',
-      itemCode: 'PRD-002',
-      quantity: 200,
-      unit: '개',
-      workCenter: '조립라인2',
-      startDate: '2024-01-16',
-      endDate: '2024-01-25',
-      status: 'PENDING',
-      completedQuantity: 0,
-      assignedTo: '이작업',
-      priority: 'NORMAL'
-    },
-    {
-      id: 3,
-      orderNumber: 'WO-2024-003',
-      itemName: '제품C',
-      itemCode: 'PRD-003',
-      quantity: 50,
-      unit: '개',
-      workCenter: '가공라인1',
-      startDate: '2024-01-10',
-      endDate: '2024-01-15',
-      actualStartDate: '2024-01-10T08:00:00',
-      actualEndDate: '2024-01-15T17:00:00',
-      status: 'COMPLETED',
-      completedQuantity: 50,
-      assignedTo: '박작업',
-      priority: 'NORMAL'
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { makeAuthenticatedRequest, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchWorkOrders();
+  }, [isAuthenticated]);
+
+  const fetchWorkOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await makeAuthenticatedRequest('/api/work-orders');
+      
+      if (response.ok) {
+        const data = await response.json();
+        const formattedOrders = data.data.workOrders.map((item: any, index: number) => ({
+          id: index + 1,
+          orderNumber: item.orderNumber,
+          itemName: item.itemName,
+          itemCode: item.itemCode,
+          quantity: item.quantity,
+          unit: item.unit,
+          workCenter: item.workCenter,
+          startDate: item.startDate,
+          endDate: item.endDate,
+          actualStartDate: item.actualStartDate,
+          actualEndDate: item.actualEndDate,
+          status: item.status,
+          completedQuantity: item.completedQuantity,
+          assignedTo: item.assignedTo,
+          priority: item.priority
+        }));
+        setWorkOrders(formattedOrders);
+      } else {
+        throw new Error('작업지시 데이터를 불러오는데 실패했습니다.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');

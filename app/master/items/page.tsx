@@ -99,10 +99,60 @@ export default function ItemsPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowModal(false);
-    setEditingItem(null);
+    
+    const formData = new FormData(e.target as HTMLFormElement);
+    const itemData = {
+      code: formData.get('code') as string,
+      name: formData.get('name') as string,
+      category: formData.get('category') as string,
+      supplierId: formData.get('supplierId') as string,
+      unit: formData.get('unit') as string,
+      price: parseFloat(formData.get('price') as string) || 0,
+      cost: parseFloat(formData.get('cost') as string) || 0,
+      minStock: parseInt(formData.get('minStock') as string) || 0,
+      maxStock: parseInt(formData.get('maxStock') as string) || 0,
+      safetyStock: parseInt(formData.get('safetyStock') as string) || 0,
+      leadTime: parseInt(formData.get('leadTime') as string) || 1,
+      specification: formData.get('specification') as string,
+      description: formData.get('description') as string,
+      isActive: true
+    };
+
+    try {
+      const url = editingItem ? `/api/items/${editingItem._id}` : '/api/items';
+      const method = editingItem ? 'PUT' : 'POST';
+      
+      const response = await makeAuthenticatedRequest(url, {
+        method,
+        body: JSON.stringify(itemData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (editingItem) {
+          // Update existing item
+          setItems(items.map(item => 
+            item._id === editingItem._id ? result.data.item : item
+          ));
+        } else {
+          // Add new item
+          setItems([result.data.item, ...items]);
+        }
+        
+        setShowModal(false);
+        setEditingItem(null);
+        alert(editingItem ? '품목이 수정되었습니다.' : '품목이 등록되었습니다.');
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || '저장에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Submit error:', error);
+      alert('저장 중 오류가 발생했습니다.');
+    }
   };
 
   const handleExcelDownload = () => {
@@ -315,39 +365,54 @@ export default function ItemsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    품목코드
+                    품목코드 <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    name="code"
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                     defaultValue={editingItem?.code}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    품목명
+                    품목명 <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    name="name"
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                     defaultValue={editingItem?.name}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    카테고리
+                    카테고리 <span className="text-red-500">*</span>
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500">
-                    <option>원자재</option>
-                    <option>부품</option>
-                    <option>완제품</option>
+                  <select 
+                    name="category" 
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    defaultValue={editingItem?.category}
+                  >
+                    <option value="">선택하세요</option>
+                    <option value="RAW_MATERIAL">원자재</option>
+                    <option value="COMPONENT">부품</option>
+                    <option value="FINISHED_PRODUCT">완제품</option>
+                    <option value="CONSUMABLE">소모품</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     협력사
                   </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500">
+                  <select 
+                    name="supplierId"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    defaultValue={editingItem?.supplierId?._id}
+                  >
                     <option value="">협력사 선택</option>
                     <option value="supplier1">한국제조(주)</option>
                     <option value="supplier2">글로벌공급(주)</option>
@@ -355,12 +420,15 @@ export default function ItemsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    단위
+                    단위 <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    name="unit"
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                     defaultValue={editingItem?.unit}
+                    placeholder="예: EA, KG, L"
                   />
                 </div>
                 <div>
@@ -369,6 +437,9 @@ export default function ItemsPage() {
                   </label>
                   <input
                     type="number"
+                    name="price"
+                    min="0"
+                    step="0.01"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                     defaultValue={editingItem?.price}
                   />
@@ -379,6 +450,9 @@ export default function ItemsPage() {
                   </label>
                   <input
                     type="number"
+                    name="cost"
+                    min="0"
+                    step="0.01"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                     defaultValue={editingItem?.cost}
                   />
@@ -389,6 +463,8 @@ export default function ItemsPage() {
                   </label>
                   <input
                     type="number"
+                    name="minStock"
+                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                     defaultValue={editingItem?.minStock}
                   />
@@ -399,8 +475,56 @@ export default function ItemsPage() {
                   </label>
                   <input
                     type="number"
+                    name="maxStock"
+                    min="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
                     defaultValue={editingItem?.maxStock}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    안전재고
+                  </label>
+                  <input
+                    type="number"
+                    name="safetyStock"
+                    min="0"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    defaultValue={editingItem?.safetyStock}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    리드타임 (일)
+                  </label>
+                  <input
+                    type="number"
+                    name="leadTime"
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    defaultValue={editingItem?.leadTime || 1}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    사양/규격
+                  </label>
+                  <input
+                    type="text"
+                    name="specification"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    defaultValue={editingItem?.specification}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    설명
+                  </label>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+                    defaultValue={editingItem?.description}
                   />
                 </div>
               </div>
